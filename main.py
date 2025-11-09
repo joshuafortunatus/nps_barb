@@ -59,32 +59,31 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     return all_data
 
 def load_to_bigquery(data, table_name):
-    """Load JSON data to BigQuery table"""
+    """Load JSON data to BigQuery table without unnesting arrays"""
     if not data:
         print(f"No data to load for {table_name}")
         return
     
-    # Debug: check what we're receiving
     print(f"Loading {len(data)} items to {table_name}")
-    if data:
-        print(f"First item type: {type(data[0])}")
-        if isinstance(data[0], dict):
-            print(f"First item keys: {list(data[0].keys())[:5]}")
-        else:
-            print(f"First item value: {data[0]}")
     
-    # Add metadata columns - ensure each item is a dict
+    # Add metadata column
     load_timestamp = datetime.utcnow().isoformat()
     processed_data = []
     
     for i, record in enumerate(data):
-        # Skip if not a dict
         if not isinstance(record, dict):
             print(f"Warning: Skipping non-dict record at index {i} in {table_name}: {type(record)}")
             continue
         
-        # Create a copy to avoid modifying original
-        record_copy = record.copy()
+        # Convert arrays to JSON strings to prevent unnesting
+        record_copy = {}
+        for key, value in record.items():
+            if isinstance(value, (list, dict)):
+                # Serialize complex types to JSON string
+                record_copy[key] = json.dumps(value)
+            else:
+                record_copy[key] = value
+        
         record_copy['_loaded_at'] = load_timestamp
         processed_data.append(record_copy)
     
@@ -94,7 +93,7 @@ def load_to_bigquery(data, table_name):
     
     table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
     
-    # Configure load job
+    # Configure load job - autodetect will create columns but won't unnest since arrays are strings
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
@@ -103,7 +102,7 @@ def load_to_bigquery(data, table_name):
     
     # Load data
     job = client.load_table_from_json(processed_data, table_id, job_config=job_config)
-    job.result()  # Wait for job to complete
+    job.result()
     
     print(f"Loaded {len(processed_data)} rows to {table_id}")
 
