@@ -64,10 +64,33 @@ def load_to_bigquery(data, table_name):
         print(f"No data to load for {table_name}")
         return
     
-    # Add metadata columns
+    # Debug: check what we're receiving
+    print(f"Loading {len(data)} items to {table_name}")
+    if data:
+        print(f"First item type: {type(data[0])}")
+        if isinstance(data[0], dict):
+            print(f"First item keys: {list(data[0].keys())[:5]}")
+        else:
+            print(f"First item value: {data[0]}")
+    
+    # Add metadata columns - ensure each item is a dict
     load_timestamp = datetime.utcnow().isoformat()
-    for record in data:
-        record['_loaded_at'] = load_timestamp
+    processed_data = []
+    
+    for i, record in enumerate(data):
+        # Skip if not a dict
+        if not isinstance(record, dict):
+            print(f"Warning: Skipping non-dict record at index {i} in {table_name}: {type(record)}")
+            continue
+        
+        # Create a copy to avoid modifying original
+        record_copy = record.copy()
+        record_copy['_loaded_at'] = load_timestamp
+        processed_data.append(record_copy)
+    
+    if not processed_data:
+        print(f"No valid records to load for {table_name}")
+        return
     
     table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
     
@@ -79,10 +102,10 @@ def load_to_bigquery(data, table_name):
     )
     
     # Load data
-    job = client.load_table_from_json(data, table_id, job_config=job_config)
+    job = client.load_table_from_json(processed_data, table_id, job_config=job_config)
     job.result()  # Wait for job to complete
     
-    print(f"Loaded {len(data)} rows to {table_id}")
+    print(f"Loaded {len(processed_data)} rows to {table_id}")
 
 def main():
     """Main execution function"""
