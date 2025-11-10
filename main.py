@@ -1,7 +1,7 @@
 import urllib.request
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
@@ -16,6 +16,16 @@ credentials_json = json.loads(os.environ['GOOGLE_CREDENTIALS_JSON'])
 credentials = service_account.Credentials.from_service_account_info(credentials_json)
 client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
 
+# National park codes from your CSV
+NATIONAL_PARK_CODES = [
+    'acad', 'arch', 'badl', 'bibe', 'bisc', 'blca', 'brca', 'cany', 'care', 'cave',
+    'chis', 'cong', 'crla', 'cuva', 'dena', 'drto', 'deva', 'ever', 'gaar', 'glac',
+    'glba', 'grba', 'grca', 'grsa', 'grte', 'grsm', 'gumo', 'hale', 'havo', 'hosp',
+    'indu', 'isro', 'jotr', 'katm', 'kefj', 'kica', 'kova', 'lacl', 'lavo', 'maca',
+    'meve', 'mora', 'neri', 'npsa', 'olym', 'pefo', 'pinn', 'redw', 'romo', 'sagu',
+    'seki', 'shen', 'thro', 'voya', 'wica', 'wrst', 'yell', 'yose', 'zion'
+]
+
 # Define endpoints and their corresponding table names
 ENDPOINTS = {
     'parks': {'path': '/parks', 'table': 'nps_parks'},
@@ -23,6 +33,7 @@ ENDPOINTS = {
     'amenities_parks': {'path': '/amenities/parksplaces', 'table': 'nps_amenities_parks'},
     'tours': {'path': '/tours', 'table': 'nps_tours'},
     'thingstodo': {'path': '/thingstodo', 'table': 'nps_things_to_do'},
+    'events': {'path': '/events', 'table': 'nps_events'},
 }
 
 def fetch_endpoint_data(endpoint_name, endpoint_path):
@@ -57,6 +68,30 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     
     print(f"Total {endpoint_name}: {len(all_data)}")
     return all_data
+
+def filter_events(events):
+    """Filter events for national parks with end date today or after"""
+    print(f"\n=== Filtering events ===")
+    today = date.today().isoformat()
+    
+    filtered_events = []
+    for event in events:
+        # Check if event has park code in national parks list
+        park_code = event.get('parkCode', '').lower()
+        if park_code not in NATIONAL_PARK_CODES:
+            continue
+        
+        # Check end date
+        date_end = event.get('dateEnd', '')
+        if not date_end:
+            continue
+        
+        # Compare dates (ISO format YYYY-MM-DD sorts correctly as strings)
+        if date_end >= today:
+            filtered_events.append(event)
+    
+    print(f"Filtered to {len(filtered_events)} events (from {len(events)} total)")
+    return filtered_events
 
 def load_to_bigquery(data, table_name):
     """Load JSON data to BigQuery table without unnesting arrays"""
@@ -113,6 +148,11 @@ def main():
     
     for endpoint_name, endpoint_config in ENDPOINTS.items():
         data = fetch_endpoint_data(endpoint_name, endpoint_config['path'])
+        
+        # Special handling for events endpoint
+        if endpoint_name == 'events':
+            data = filter_events(data)
+        
         load_to_bigquery(data, endpoint_config['table'])
     
     print("\n=== Data fetch complete ===")
