@@ -7,8 +7,8 @@ from google.oauth2 import service_account
 
 # Configuration
 NPS_KEY = os.environ['NPS_KEY']
-PROJECT_ID = 'personal-jtf'
-DATASET_ID = 'all_data'
+PROJECT_ID = os.environ['PROJECT_ID']
+DATASET_ID = os.environ['DATASET_ID']
 BASE_URL = "https://developer.nps.gov/api/v1"
 
 # Set up BigQuery client
@@ -19,11 +19,12 @@ client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
 # National park codes from your CSV
 NATIONAL_PARK_CODES = [
     'acad', 'arch', 'badl', 'bibe', 'bisc', 'blca', 'brca', 'cany', 'care', 'cave',
-    'chis', 'cong', 'crla', 'cuva', 'dena', 'drto', 'deva', 'ever', 'gaar', 'glac',
-    'glba', 'grba', 'grca', 'grsa', 'grte', 'grsm', 'gumo', 'hale', 'havo', 'hosp',
-    'indu', 'isro', 'jotr', 'katm', 'kefj', 'kica', 'kova', 'lacl', 'lavo', 'maca',
-    'meve', 'mora', 'neri', 'npsa', 'olym', 'pefo', 'pinn', 'redw', 'romo', 'sagu',
-    'seki', 'shen', 'thro', 'voya', 'wica', 'wrst', 'yell', 'yose', 'zion'
+    'chis', 'cong', 'crla', 'cuva', 'dena', 'drto', 'deva', 'ever', 'gaar', 'gate',
+    'glac', 'glba', 'grba', 'grca', 'grsa', 'grte', 'grsm', 'gumo', 'hale', 'havo',
+    'hosp', 'indu', 'isro', 'jotr', 'katm', 'kefj', 'kica', 'kova', 'lacl', 'lavo',
+    'maca', 'meve', 'mora', 'neri', 'npsa', 'olym', 'pefo', 'pinn', 'redw', 'romo',
+    'sagu', 'seki', 'shen', 'thro', 'viis', 'voya', 'whsa', 'wica', 'wrst', 'yell',
+    'yose', 'zion'
 ]
 
 # Define endpoints and their corresponding table names
@@ -101,21 +102,32 @@ def filter_events(events):
     print(f"\n=== Filtering events ===")
     today = date.today().isoformat()
     
+    # Debug: check first event
+    if events:
+        print(f"Sample event keys: {list(events[0].keys())}")
+        print(f"Sample parkCode: '{events[0].get('parkCode')}'")
+        print(f"Sample dateEnd: '{events[0].get('dateEnd')}'")
+        print(f"Today: '{today}'")
+    
     filtered_events = []
     for event in events:
         # Check if event has park code in national parks list
         park_code = event.get('parkCode', '').lower()
         if park_code not in NATIONAL_PARK_CODES:
+            print(f"Skipping event '{event.get('title')}' - parkCode '{park_code}' not in list")
             continue
         
         # Check end date
         date_end = event.get('dateEnd', '')
         if not date_end:
+            print(f"Skipping event '{event.get('title')}' - no dateEnd")
             continue
         
         # Compare dates (ISO format YYYY-MM-DD sorts correctly as strings)
         if date_end >= today:
             filtered_events.append(event)
+        else:
+            print(f"Skipping event '{event.get('title')}' - dateEnd {date_end} < today {today}")
     
     print(f"Filtered to {len(filtered_events)} events (from {len(events)} total)")
     return filtered_events
