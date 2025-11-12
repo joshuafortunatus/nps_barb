@@ -1,4 +1,4 @@
-# NPS Data Pipeline
+# NPS Data Pipeline for Barb
 
 Automated data pipeline that fetches National Parks Service (NPS) API data nightly and loads it into BigQuery for analysis.
 
@@ -26,7 +26,7 @@ The pipeline fetches data from the following NPS API endpoints:
 
 ## National Parks Covered
 
-All 66 US National Parks are included:
+All 62 US National Parks are included:
 
 Acadia, Arches, Badlands, Big Bend, Biscayne, Black Canyon of the Gunnison, Bryce Canyon, Canyonlands, Capitol Reef, Carlsbad Caverns, Channel Islands, Congaree, Crater Lake, Cuyahoga Valley, Denali, Dry Tortugas, Death Valley, Everglades, Gates of the Arctic, Gateway Arch, Glacier, Glacier Bay, Great Basin, Grand Canyon, Great Sand Dunes, Grand Teton, Great Smoky Mountains, Guadalupe Mountains, Haleakalā, Hawaiʻi Volcanoes, Hot Springs, Indiana Dunes, Isle Royale, Joshua Tree, Katmai, Kenai Fjords, Kings Canyon, Kobuk Valley, Lake Clark, Lassen Volcanic, Mammoth Cave, Mesa Verde, Mount Rainier, New River Gorge, National Park of American Samoa, Olympic, Petrified Forest, Pinnacles, Redwood, Rocky Mountain, Saguaro, Sequoia, Shenandoah, Theodore Roosevelt, Virgin Islands, Voyageurs, White Sands, Wind Cave, Wrangell-St. Elias, Yellowstone, Yosemite, Zion
 
