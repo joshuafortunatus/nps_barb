@@ -41,11 +41,22 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     print(f"\n=== Fetching {endpoint_name} ===")
     
     all_data = []
+    seen_ids = set()
     start = 0
     limit = 50
     
+    # Get today's date for events endpoint
+    today = date.today().isoformat()
+    
+    # Create comma-separated park codes for events endpoint
+    park_codes_param = ','.join(NATIONAL_PARK_CODES)
+    
     while True:
-        url = f"{BASE_URL}{endpoint_path}?start={start}&limit={limit}"
+        # Build URL with special handling for events endpoint
+        if endpoint_name == 'events':
+            url = f"{BASE_URL}{endpoint_path}?parkCode={park_codes_param}&dateEnd={today}&start={start}&limit={limit}"
+        else:
+            url = f"{BASE_URL}{endpoint_path}?start={start}&limit={limit}"
         
         req = urllib.request.Request(url, headers={"X-Api-Key": NPS_KEY})
         
@@ -61,10 +72,26 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
         if not items:
             break
         
-        all_data.extend(items)
-        start += limit
+        # For events endpoint, deduplicate
+        if endpoint_name == 'events':
+            new_count = 0
+            for item in items:
+                event_id = item.get('id')
+                if event_id not in seen_ids:
+                    seen_ids.add(event_id)
+                    all_data.append(item)
+                    new_count += 1
+            
+            print(f"Fetched {len(items)} events, {new_count} new | Total unique: {len(all_data)}")
+            
+            # If no new events, stop
+            if new_count == 0:
+                break
+        else:
+            all_data.extend(items)
+            print(f"Fetched {len(all_data)} {endpoint_name} so far...")
         
-        print(f"Fetched {len(all_data)} {endpoint_name} so far...")
+        start += limit
     
     print(f"Total {endpoint_name}: {len(all_data)}")
     return all_data
