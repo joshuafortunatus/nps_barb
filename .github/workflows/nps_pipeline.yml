@@ -27,5 +27,7 @@ jobs:
         env:
           NPS_KEY: ${{ secrets.NPS_KEY }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          DATASET_ID: ${{ secrets.DATASET_ID }}
         run: |
           python main.py
