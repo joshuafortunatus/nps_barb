@@ -23,7 +23,7 @@ FROM `{PROJECT_ID}.{DATASET_ID}.nps__national_park_activities`
 WHERE is_walk_or_hike = TRUE
   AND activity_id NOT IN (
     SELECT activity_id 
-    FROM `{PROJECT_ID}.{DATASET_ID}.nps__activity_difficulty_ratings`
+    FROM `{PROJECT_ID}.{DATASET_ID}.nps__mart_activity_difficulty_ratings`
   )
 """
 
