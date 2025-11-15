@@ -1,108 +1,42 @@
-# NPS Data Pipeline for Barb
+# NPS Data Collection Pipeline For My Friend Barb
 
-Automated data pipeline that fetches National Parks Service (NPS) API data nightly and loads it into BigQuery for analysis.
+Automated data collection from the National Parks Service API with AI-powered hike difficulty ratings
 
-## Overview
-
-This pipeline collects data from the NPS API for all 66 US National Parks and loads it into BigQuery tables. The data includes parks information, amenities, tours, activities, and upcoming events.
-
-## Data Sources
-
-The pipeline fetches data from the following NPS API endpoints:
-
-- **Parks** - Basic park information, locations, descriptions
-- **Amenities** - Available amenities across parks
-- **Amenities Parks** - Park-specific amenity mappings
-- **Tours** - Guided tours available at parks
-- **Things to Do** - Activities and attractions
-- **Events** - Upcoming events (filtered to end on or after today)
-
-## Infrastructure
-
-- **API**: [National Parks Service API](https://www.nps.gov/subjects/developer/api-documentation.htm)
-- **Data Warehouse**: Google BigQuery
-- **Orchestration**: GitHub Actions (runs nightly at 2 AM UTC)
-- **Language**: Python 3.11
-
-## National Parks Covered
-
-All 62 US National Parks are included:
-
-Acadia, Arches, Badlands, Big Bend, Biscayne, Black Canyon of the Gunnison, Bryce Canyon, Canyonlands, Capitol Reef, Carlsbad Caverns, Channel Islands, Congaree, Crater Lake, Cuyahoga Valley, Denali, Dry Tortugas, Death Valley, Everglades, Gates of the Arctic, Gateway Arch, Glacier, Glacier Bay, Great Basin, Grand Canyon, Great Sand Dunes, Grand Teton, Great Smoky Mountains, Guadalupe Mountains, Haleakalā, Hawaiʻi Volcanoes, Hot Springs, Indiana Dunes, Isle Royale, Joshua Tree, Katmai, Kenai Fjords, Kings Canyon, Kobuk Valley, Lake Clark, Lassen Volcanic, Mammoth Cave, Mesa Verde, Mount Rainier, New River Gorge, National Park of American Samoa, Olympic, Petrified Forest, Pinnacles, Redwood, Rocky Mountain, Saguaro, Sequoia, Shenandoah, Theodore Roosevelt, Virgin Islands, Voyageurs, White Sands, Wind Cave, Wrangell-St. Elias, Yellowstone, Yosemite, Zion
+## What it does
+- 🌲 Fetches parks, activities, events, and amenities from NPS API
+- 🤖 Rates hiking difficulty using Claude AI
+- ☁️ Loads everything to BigQuery
+- ⏰ Runs automatically every night via GitHub Actions
 
 ## Setup
-
-### Prerequisites
-
-- Python 3.11+
-- Google Cloud Project with BigQuery enabled
-- NPS API key (free from [NPS Developer Portal](https://www.nps.gov/subjects/developer/get-started.htm))
-
-### Required Secrets
-
-Configure the following GitHub secrets:
-
-- `NPS_KEY` - Your NPS API key
-- `GOOGLE_CREDENTIALS_JSON` - GCP service account JSON credentials
-- `PROJECT_ID` - Google Cloud project ID
-- `DATASET_ID` - BigQuery dataset ID
-
-### Local Development
-
-1. Clone the repository
-```bash
-git clone <repo-url>
-cd nps-data-pipeline
-```
-
-2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set environment variables
+### Required Secrets (GitHub Actions)
+- `NPS_KEY` - Your NPS API key
+- `ANTHROPIC_API_KEY` - Your Claude API key  
+- `PROJECT_ID` - GCP project ID
+- `DATASET_ID` - BigQuery dataset name
+- `GOOGLE_CREDENTIALS_JSON` - GCP service account JSON
+
+## Local Testing
 ```bash
-export NPS_KEY="your-api-key"
-export GOOGLE_CREDENTIALS_JSON='{"type": "service_account", ...}'
+export NPS_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
 export PROJECT_ID="your-project-id"
 export DATASET_ID="your-dataset-id"
+export GOOGLE_CREDENTIALS_JSON='{"type": "service_account", ...}'
+
+python scripts/fetch_nps_data.py
+python scripts/rate_hikes.py
 ```
 
-4. Run the pipeline
-```bash
-python main.py
-```
-
-## BigQuery Tables
-
-Data is loaded into the following tables in BigQuery:
-
-- `nps_parks` - Park information
-- `nps_amenities` - Available amenities
-- `nps_amenities_parks` - Park-amenity mappings
-- `nps_tours` - Guided tours
-- `nps_things_to_do` - Activities
-- `nps_events` - Upcoming events
-
-All tables include a `_loaded_at` timestamp column for tracking data freshness.
-
-## Schedule
-
-The pipeline runs automatically every night at 2 AM UTC via GitHub Actions. It can also be triggered manually from the Actions tab in GitHub.
-
-## Data Handling
-
-- **JSON Fields**: Complex nested data (arrays, objects) are stored as JSON strings to prevent unnesting
-- **Deduplication**: Events are deduplicated by ID to handle API pagination quirks
-- **Write Mode**: Tables are fully refreshed (TRUNCATE) on each run
-- **Events Filtering**: Only events ending on or after the current date are loaded
-
-## Error Handling
-
-- API errors are logged and the pipeline continues with remaining endpoints
-- Invalid records are skipped with warnings
-- Empty datasets are handled gracefully without creating tables
-
-## License
-
-MIT
+## Output Tables
+- `nps_parks`
+- `nps_things_to_do`
+- `nps_activity_difficulty_ratings` ⭐ (AI-generated)
+- `nps_events`
+- `nps_amenities`
+- `nps_amenities_parks`
+- `nps_tours`

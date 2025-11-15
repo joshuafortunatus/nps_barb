@@ -1,0 +1,114 @@
+import anthropic
+from google.cloud import bigquery
+from datetime import datetime
+import pandas as pd
+import os
+import time
+
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+bq = bigquery.Client()
+
+PROJECT_ID = os.environ['PROJECT_ID']
+DATASET_ID = os.environ['DATASET_ID']
+
+# Get unrated hikes
+query = f"""
+SELECT 
+    activity_id,
+    activity_title,
+    short_description,
+    long_description,
+    activity_url
+FROM `{PROJECT_ID}.{DATASET_ID}.nps__national_park_activities`
+WHERE is_walk_or_hike = TRUE
+  AND activity_id NOT IN (
+    SELECT activity_id 
+    FROM `{PROJECT_ID}.{DATASET_ID}.nps__mart_activity_difficulty_ratings`
+  )
+"""
+
+print("Fetching unrated hikes from BigQuery...")
+unrated = bq.query(query).to_dataframe()
+print(f"Found {len(unrated)} unrated hikes to process\n")
+
+if len(unrated) == 0:
+    print("No new hikes to rate. Exiting.")
+    exit(0)
+
+ratings = []
+for idx, hike in unrated.iterrows():
+    # Combine descriptions
+    description_parts = []
+    if pd.notna(hike['short_description']):
+        description_parts.append(f"Short: {hike['short_description']}")
+    if pd.notna(hike['long_description']):
+        description_parts.append(f"Long: {hike['long_description']}")
+    
+    full_description = "\n\n".join(description_parts) if description_parts else "No description available"
+    
+    prompt = f"""Rate this hike as Easy, Moderate, or Difficult based on the description.
+
+Title: {hike['activity_title']}
+
+{full_description}
+
+URL: {hike['activity_url']}
+
+Respond with ONLY one word: Easy, Moderate, or Difficult."""
+    
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=100,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        
+        rating = response.content[0].text.strip()
+        
+        # Validate rating
+        if rating not in ['Easy', 'Moderate', 'Difficult']:
+            print(f"⚠️  Unexpected rating '{rating}' for {hike['activity_title']}, defaulting to Moderate")
+            rating = 'Moderate'
+        
+        ratings.append({
+            'activity_id': hike['activity_id'],
+            'difficulty_rating': rating,
+            'rated_at': datetime.utcnow().isoformat(),
+            'rating_source': 'claude_api'
+        })
+        
+        print(f"✓ [{idx+1}/{len(unrated)}] {hike['activity_title'][:50]:50} -> {rating}")
+        
+        # Small delay to avoid rate limits
+        time.sleep(0.5)
+        
+    except Exception as e:
+        print(f"✗ Error rating {hike['activity_title']}: {e}")
+        continue
+
+# Write ratings back to BigQuery
+if ratings:
+    print(f"\nWriting {len(ratings)} ratings to BigQuery...")
+    ratings_df = pd.DataFrame(ratings)
+    
+    table_id = f"{PROJECT_ID}.{DATASET_ID}.nps__mart_activity_difficulty_ratings"
+    
+    job_config = bigquery.LoadJobConfig(
+        write_disposition="WRITE_APPEND",
+    )
+    
+    job = bq.load_table_from_dataframe(
+        ratings_df, 
+        table_id, 
+        job_config=job_config
+    )
+    job.result()  # Wait for completion
+    
+    print(f"✓ Successfully wrote {len(ratings)} ratings to BigQuery")
+    print(f"\nSummary:")
+    print(ratings_df['difficulty_rating'].value_counts())
+else:
+    print("No ratings to write.")
