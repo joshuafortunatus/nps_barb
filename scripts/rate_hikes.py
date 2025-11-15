@@ -4,10 +4,18 @@ from datetime import datetime
 import pandas as pd
 import os
 import time
+from google.oauth2 import service_account
+import json
 
+# Initialize Anthropic client
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-bq = bigquery.Client()
 
+# Set up BigQuery client (same pattern as fetch_nps_data.py)
+credentials_json = json.loads(os.environ['GOOGLE_CREDENTIALS_JSON'])
+credentials = service_account.Credentials.from_service_account_info(credentials_json)
+bq = bigquery.Client(credentials=credentials, project=os.environ['PROJECT_ID'])
+
+# Configuration
 PROJECT_ID = os.environ['PROJECT_ID']
 DATASET_ID = os.environ['DATASET_ID']
 
