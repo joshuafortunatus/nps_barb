@@ -50,13 +50,15 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     # Get today's date for events endpoint
     today = date.today().isoformat()
     
-    # Create comma-separated park codes for events endpoint
+    # Create comma-separated park codes for events and places endpoints
     park_codes_param = ','.join(NATIONAL_PARK_CODES)
     
     while True:
-        # Build URL with special handling for events endpoint
+        # Build URL with special handling for events and places endpoints
         if endpoint_name == 'events':
             url = f"{BASE_URL}{endpoint_path}?parkCode={park_codes_param}&dateEnd={today}&start={start}&limit={limit}"
+        elif endpoint_name == 'places':
+            url = f"{BASE_URL}{endpoint_path}?parkCode={park_codes_param}&start={start}&limit={limit}"
         else:
             url = f"{BASE_URL}{endpoint_path}?start={start}&limit={limit}"
         
