@@ -84,7 +84,7 @@ Respond with ONLY one word: Easy, Moderate, or Difficult."""
         ratings.append({
             'activity_id': hike['activity_id'],
             'difficulty_rating': rating,
-            'rated_at': datetime.utcnow().isoformat(),
+            'rated_at': datetime.utcnow(),
             'rating_source': 'claude_api'
         })
         
