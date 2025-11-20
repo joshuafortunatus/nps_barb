@@ -55,7 +55,7 @@ for idx, hike in unrated.iterrows():
     
     prompt = f"""Rate this hike as Easy, Moderate, or Difficult based on the description.
 
-Title: {hike['activity_title']}
+Title: {hike['hike_title']}
 
 {full_description}
 
@@ -77,23 +77,23 @@ Respond with ONLY one word: Easy, Moderate, or Difficult."""
         
         # Validate rating
         if rating not in ['Easy', 'Moderate', 'Difficult']:
-            print(f"⚠️  Unexpected rating '{rating}' for {hike['activity_title']}, defaulting to Moderate")
+            print(f"⚠️  Unexpected rating '{rating}' for {hike['hike_title']}, defaulting to Moderate")
             rating = 'Moderate'
         
         ratings.append({
-            'activity_id': hike['activity_id'],
+            'activity_id': hike['hike_id'],  # Changed from activity_id to hike_id
             'difficulty_rating': rating,
             'rated_at': datetime.utcnow(),
             'rating_source': 'claude_api'
         })
         
-        print(f"✓ [{idx+1}/{len(unrated)}] {hike['activity_title'][:50]:50} -> {rating}")
+        print(f"✓ [{idx+1}/{len(unrated)}] {hike['hike_title'][:50]:50} -> {rating}")
         
         # Small delay to avoid rate limits
         time.sleep(0.5)
         
     except Exception as e:
-        print(f"✗ Error rating {hike['activity_title']}: {e}")
+        print(f"✗ Error rating {hike['hike_title']}: {e}")
         continue
 
 # Write ratings back to BigQuery
