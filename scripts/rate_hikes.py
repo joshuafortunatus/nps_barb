@@ -22,14 +22,13 @@ DATASET_ID = os.environ['DATASET_ID']
 # Get unrated hikes
 query = f"""
 SELECT 
-    activity_id,
-    activity_title,
+    hike_id,
+    hike_title,
     short_description,
     long_description,
     activity_url
-FROM `{PROJECT_ID}.{DATASET_ID}.nps__national_park_activities`
-WHERE is_walk_or_hike = TRUE
-  AND activity_id NOT IN (
+FROM `{PROJECT_ID}.{DATASET_ID}.nps__national_park_hikes`
+  AND hike_id NOT IN (
     SELECT activity_id 
     FROM `{PROJECT_ID}.{DATASET_ID}.nps__mart_activity_difficulty_ratings`
   )
