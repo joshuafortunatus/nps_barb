@@ -28,7 +28,7 @@ SELECT
     long_description,
     activity_url
 FROM `{PROJECT_ID}.{DATASET_ID}.nps__national_park_hikes`
-  AND hike_id NOT IN (
+  WHERE hike_id NOT IN (
     SELECT activity_id 
     FROM `{PROJECT_ID}.{DATASET_ID}.nps__mart_activity_difficulty_ratings`
   )
