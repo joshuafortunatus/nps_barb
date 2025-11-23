@@ -125,6 +125,14 @@ def load_to_bigquery(data, table_name):
     processed_data = []
     
     for i, record in enumerate(data):
+        # Handle case where API returns single-element lists
+        if isinstance(record, list):
+            if len(record) == 1 and isinstance(record[0], dict):
+                record = record[0]
+            else:
+                print(f"Warning: Skipping list record at index {i} in {table_name} with {len(record)} elements")
+                continue
+        
         if not isinstance(record, dict):
             print(f"Warning: Skipping non-dict record at index {i} in {table_name}: {type(record)}")
             continue
