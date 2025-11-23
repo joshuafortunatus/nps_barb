@@ -112,66 +112,8 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     print(f"Total {endpoint_name}: {len(all_data)}")
     return all_data
 
-def flatten_amenities_parks(data):
-    """Flatten the nested amenities/parks/places structure"""
-    flattened = []
-    
-    for amenity in data:
-        amenity_id = amenity.get('id')
-        amenity_name = amenity.get('name')
-        
-        parks = amenity.get('parks', [])
-        if isinstance(parks, str):
-            parks = json.loads(parks)
-        
-        for park in parks:
-            park_code = park.get('parkCode')
-            park_name = park.get('name')
-            park_full_name = park.get('fullName')
-            park_states = park.get('states')
-            park_designation = park.get('designation')
-            park_url = park.get('url')
-            
-            places = park.get('places', [])
-            if isinstance(places, str):
-                places = json.loads(places)
-            
-            # If there are places, create one row per place
-            if places:
-                for place in places:
-                    flattened.append({
-                        'amenity_id': amenity_id,
-                        'amenity_name': amenity_name,
-                        'park_code': park_code,
-                        'park_name': park_name,
-                        'park_full_name': park_full_name,
-                        'park_states': park_states,
-                        'park_designation': park_designation,
-                        'park_url': park_url,
-                        'place_id': place.get('id'),
-                        'place_title': place.get('title'),
-                        'place_url': place.get('url')
-                    })
-            else:
-                # If no places, still create a row with park info
-                flattened.append({
-                    'amenity_id': amenity_id,
-                    'amenity_name': amenity_name,
-                    'park_code': park_code,
-                    'park_name': park_name,
-                    'park_full_name': park_full_name,
-                    'park_states': park_states,
-                    'park_designation': park_designation,
-                    'park_url': park_url,
-                    'place_id': None,
-                    'place_title': None,
-                    'place_url': None
-                })
-    
-    return flattened
-
 def load_to_bigquery(data, table_name):
-    """Load JSON data to BigQuery table without unnesting arrays"""
+    """Load JSON data to BigQuery table with nested structures preserved"""
     if not data:
         print(f"No data to load for {table_name}")
         return
@@ -183,21 +125,20 @@ def load_to_bigquery(data, table_name):
     processed_data = []
     
     for i, record in enumerate(data):
+        # Handle case where API returns single-element lists
+        if isinstance(record, list):
+            if len(record) == 1 and isinstance(record[0], dict):
+                record = record[0]
+            else:
+                print(f"Warning: Skipping list record at index {i} in {table_name} with {len(record)} elements")
+                continue
+        
         if not isinstance(record, dict):
             print(f"Warning: Skipping non-dict record at index {i} in {table_name}: {type(record)}")
             continue
         
-        # Convert arrays to JSON strings to prevent unnesting
-        record_copy = {}
-        for key, value in record.items():
-            if isinstance(value, (list, dict)):
-                # Serialize complex types to JSON string
-                record_copy[key] = json.dumps(value)
-            else:
-                record_copy[key] = value
-        
-        record_copy['_loaded_at'] = load_timestamp
-        processed_data.append(record_copy)
+        record['_loaded_at'] = load_timestamp
+        processed_data.append(record)
     
     if not processed_data:
         print(f"No valid records to load for {table_name}")
@@ -205,7 +146,7 @@ def load_to_bigquery(data, table_name):
     
     table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
     
-    # Configure load job - autodetect will create columns but won't unnest since arrays are strings
+    # Configure load job with autodetect
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
@@ -225,11 +166,6 @@ def main():
     
     for endpoint_name, endpoint_path in ENDPOINTS.items():
         data = fetch_endpoint_data(endpoint_name, endpoint_path)
-        
-        # Special handling for amenities_parks
-        if endpoint_name == 'amenities_parks':
-            data = flatten_amenities_parks(data)
-        
         table_name = get_table_name(endpoint_name)
         load_to_bigquery(data, table_name)
     
