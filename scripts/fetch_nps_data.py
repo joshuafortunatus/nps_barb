@@ -112,6 +112,64 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     print(f"Total {endpoint_name}: {len(all_data)}")
     return all_data
 
+def flatten_amenities_parks(data):
+    """Flatten the nested amenities/parks/places structure"""
+    flattened = []
+    
+    for amenity in data:
+        amenity_id = amenity.get('id')
+        amenity_name = amenity.get('name')
+        
+        parks = amenity.get('parks', [])
+        if isinstance(parks, str):
+            parks = json.loads(parks)
+        
+        for park in parks:
+            park_code = park.get('parkCode')
+            park_name = park.get('name')
+            park_full_name = park.get('fullName')
+            park_states = park.get('states')
+            park_designation = park.get('designation')
+            park_url = park.get('url')
+            
+            places = park.get('places', [])
+            if isinstance(places, str):
+                places = json.loads(places)
+            
+            # If there are places, create one row per place
+            if places:
+                for place in places:
+                    flattened.append({
+                        'amenity_id': amenity_id,
+                        'amenity_name': amenity_name,
+                        'park_code': park_code,
+                        'park_name': park_name,
+                        'park_full_name': park_full_name,
+                        'park_states': park_states,
+                        'park_designation': park_designation,
+                        'park_url': park_url,
+                        'place_id': place.get('id'),
+                        'place_title': place.get('title'),
+                        'place_url': place.get('url')
+                    })
+            else:
+                # If no places, still create a row with park info
+                flattened.append({
+                    'amenity_id': amenity_id,
+                    'amenity_name': amenity_name,
+                    'park_code': park_code,
+                    'park_name': park_name,
+                    'park_full_name': park_full_name,
+                    'park_states': park_states,
+                    'park_designation': park_designation,
+                    'park_url': park_url,
+                    'place_id': None,
+                    'place_title': None,
+                    'place_url': None
+                })
+    
+    return flattened
+
 def load_to_bigquery(data, table_name):
     """Load JSON data to BigQuery table without unnesting arrays"""
     if not data:
@@ -167,6 +225,11 @@ def main():
     
     for endpoint_name, endpoint_path in ENDPOINTS.items():
         data = fetch_endpoint_data(endpoint_name, endpoint_path)
+        
+        # Special handling for amenities_parks
+        if endpoint_name == 'amenities_parks':
+            data = flatten_amenities_parks(data)
+        
         table_name = get_table_name(endpoint_name)
         load_to_bigquery(data, table_name)
     
