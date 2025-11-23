@@ -36,7 +36,7 @@ ENDPOINTS = {
     'thingstodo': {'path': '/thingstodo', 'table': 'nps_things_to_do'},
     'events': {'path': '/events', 'table': 'nps_events'},
     'places': {'path': '/places', 'table': 'nps_places'},
-    'alerts': {'path': '/alerts', 'table': 'nps_src_places'}
+    'alerts': {'path': '/alerts', 'table': 'nps_src_alerts'}
 }
 
 def fetch_endpoint_data(endpoint_name, endpoint_path):
