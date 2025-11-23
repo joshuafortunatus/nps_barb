@@ -116,7 +116,21 @@ def flatten_amenities_parks(data):
     """Flatten the nested amenities/parks/places structure"""
     flattened = []
     
-    for amenity in data:
+    for item in data:
+        # Handle case where item itself is a list
+        if isinstance(item, list):
+            print(f"Warning: Item is a list with {len(item)} elements, processing first element")
+            if not item:
+                continue
+            amenity = item[0] if isinstance(item[0], dict) else None
+            if not amenity:
+                continue
+        elif isinstance(item, dict):
+            amenity = item
+        else:
+            print(f"Warning: Skipping item of type {type(item)}")
+            continue
+        
         amenity_id = amenity.get('id')
         amenity_name = amenity.get('name')
         
@@ -168,6 +182,7 @@ def flatten_amenities_parks(data):
                     'place_url': None
                 })
     
+    print(f"Flattened {len(data)} amenities into {len(flattened)} rows")
     return flattened
 
 def load_to_bigquery(data, table_name):
