@@ -41,7 +41,7 @@ ENDPOINTS = {
 
 # Special case mappings for table names that don't follow the pattern
 TABLE_NAME_OVERRIDES = {
-    'thingstodo': 'nps_src_things_to_do',
+    'thingstodo': 'nps__src_things_to_do',
 }
 
 def get_table_name(endpoint_key):
