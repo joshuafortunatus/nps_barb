@@ -27,17 +27,28 @@ NATIONAL_PARK_CODES = [
     'yose', 'zion'
 ]
 
-# Define endpoints and their corresponding table names
+# Define endpoints - table names follow pattern: nps_src_{key}
 ENDPOINTS = {
-    'parks': {'path': '/parks', 'table': 'nps_parks'},
-    'amenities': {'path': '/amenities', 'table': 'nps_amenities'},
-    'amenities_parks': {'path': '/amenities/parksplaces', 'table': 'nps_amenities_parks'},
-    'tours': {'path': '/tours', 'table': 'nps_tours'},
-    'thingstodo': {'path': '/thingstodo', 'table': 'nps_things_to_do'},
-    'events': {'path': '/events', 'table': 'nps_events'},
-    'places': {'path': '/places', 'table': 'nps_places'},
-    'alerts': {'path': '/alerts', 'table': 'nps_src_alerts'}
+    'parks': '/parks',
+    'amenities': '/amenities',
+    'amenities_parks': '/amenities/parksplaces',
+    'tours': '/tours',
+    'thingstodo': '/thingstodo',
+    'events': '/events',
+    'places': '/places',
+    'alerts': '/alerts'
 }
+
+# Special case mappings for table names that don't follow the pattern
+TABLE_NAME_OVERRIDES = {
+    'thingstodo': 'nps_src_things_to_do',
+}
+
+def get_table_name(endpoint_key):
+    """Get BigQuery table name for an endpoint"""
+    if endpoint_key in TABLE_NAME_OVERRIDES:
+        return TABLE_NAME_OVERRIDES[endpoint_key]
+    return f'nps_src_{endpoint_key}'
 
 def fetch_endpoint_data(endpoint_name, endpoint_path):
     """Fetch all data from an NPS API endpoint with pagination"""
@@ -154,9 +165,10 @@ def main():
     print("Starting NPS data fetch...")
     print(f"Target: {PROJECT_ID}.{DATASET_ID}")
     
-    for endpoint_name, endpoint_config in ENDPOINTS.items():
-        data = fetch_endpoint_data(endpoint_name, endpoint_config['path'])
-        load_to_bigquery(data, endpoint_config['table'])
+    for endpoint_name, endpoint_path in ENDPOINTS.items():
+        data = fetch_endpoint_data(endpoint_name, endpoint_path)
+        table_name = get_table_name(endpoint_name)
+        load_to_bigquery(data, table_name)
     
     print("\n=== Data fetch complete ===")
 
