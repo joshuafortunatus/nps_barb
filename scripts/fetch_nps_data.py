@@ -48,7 +48,7 @@ def get_table_name(endpoint_key):
     """Get BigQuery table name for an endpoint"""
     if endpoint_key in TABLE_NAME_OVERRIDES:
         return TABLE_NAME_OVERRIDES[endpoint_key]
-    return f'nps_src_{endpoint_key}'
+    return f'nps__src_{endpoint_key}'
 
 def fetch_endpoint_data(endpoint_name, endpoint_path):
     """Fetch all data from an NPS API endpoint with pagination"""
