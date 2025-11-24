@@ -113,7 +113,7 @@ def fetch_endpoint_data(endpoint_name, endpoint_path):
     return all_data
 
 def load_to_bigquery(data, table_name):
-    """Load JSON data to BigQuery table without unnesting arrays"""
+    """Load JSON data to BigQuery table with native types preserved"""
     if not data:
         print(f"No data to load for {table_name}")
         return
@@ -125,7 +125,7 @@ def load_to_bigquery(data, table_name):
     processed_data = []
     
     for i, record in enumerate(data):
-        # Special handling ONLY for amenities_parks - unwrap single-element lists
+        # Special handling for amenities_parks - unwrap single-element lists
         if table_name == 'nps__src_amenities_parks' and isinstance(record, list):
             if len(record) == 1 and isinstance(record[0], dict):
                 record = record[0]
@@ -137,17 +137,8 @@ def load_to_bigquery(data, table_name):
             print(f"Warning: Skipping non-dict record at index {i} in {table_name}: {type(record)}")
             continue
         
-        # Convert arrays to JSON strings to prevent unnesting (for all endpoints except amenities_parks)
-        record_copy = {}
-        for key, value in record.items():
-            if isinstance(value, (list, dict)):
-                # Serialize complex types to JSON string
-                record_copy[key] = json.dumps(value)
-            else:
-                record_copy[key] = value
-        
-        record_copy['_loaded_at'] = load_timestamp
-        processed_data.append(record_copy)
+        record['_loaded_at'] = load_timestamp
+        processed_data.append(record)
     
     if not processed_data:
         print(f"No valid records to load for {table_name}")
@@ -155,14 +146,12 @@ def load_to_bigquery(data, table_name):
     
     table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
     
-    # Configure load job - autodetect will create columns but won't unnest since arrays are strings
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         autodetect=True,
     )
     
-    # Load data
     job = client.load_table_from_json(processed_data, table_id, job_config=job_config)
     job.result()
     
