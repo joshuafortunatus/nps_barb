@@ -1,0 +1,55 @@
+name: Scrape Trail Data
+
+on:
+  # Run after the main workflow completes
+  workflow_run:
+    workflows: ["Fetch and Load NPS Data"]
+    types:
+      - completed
+  
+  # Also allow manual trigger
+  workflow_dispatch:
+  
+  # Run weekly on Mondays at 3 AM UTC (after main workflow)
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  scrape-trails:
+    runs-on: ubuntu-latest
+    
+    # Only run if main workflow succeeded or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Scrape trail data from NPS websites
+        env:
+          PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          DATASET_ID: ${{ secrets.DATASET_ID }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          python scripts/scrape_trails.py \
+            --project-id $PROJECT_ID \
+            --dataset-id $DATASET_ID \
+            --delay 1.5
+      
+      - name: Upload trail data as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trail-data
+          path: trails.json
+          retention-days: 30
+        if: always()
